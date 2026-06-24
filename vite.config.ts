@@ -9,8 +9,9 @@ import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 export default defineConfig({
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
-    // nitro/vite builds from this
     server: { entry: "server" },
+    // Use node-server preset so Nitro outputs a plain Node.js server (required for Render/VPS).
+    // The NITRO_PRESET env var on Render will override this if set.
   },
   vite: {
     server: {
@@ -20,7 +21,7 @@ export default defineConfig({
     preview: {
       host: true,
       allowedHosts: "all",
-      port: 3000,
+      port: Number(process.env.PORT) || 3000,
     },
   },
 });
