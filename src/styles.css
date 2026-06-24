@@ -1,0 +1,221 @@
+@import url("https://fonts.googleapis.com/css2?family=Caveat:wght@400..700&family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&display=swap");
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "tailwindcss" source(none);
+@import "tw-animate-css";
+@source "../src";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-2xl: 24px;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-brand: var(--brand);
+  --color-brand-2: var(--brand-2);
+
+  --font-display: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-handwritten: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  --radius: 8px;
+  --background: oklch(0.08 0 0); /* Sleek deep black/dark grey: #030303 */
+  --foreground: oklch(0.98 0 0); /* Clean white */
+  --surface: oklch(0.14 0.002 0); /* Dark grey surface: #0f0f0f */
+  --surface-elevated: oklch(0.18 0.003 0); /* Lighter grey surface: #161616 */
+  --card: oklch(0.14 0.002 0); /* Card color */
+  --card-foreground: oklch(0.98 0 0);
+  --popover: oklch(0.18 0.003 0);
+  --popover-foreground: oklch(0.98 0 0);
+  --primary: oklch(0.62 0.22 25); /* YT Music Red: #ff0000 */
+  --primary-foreground: oklch(0.98 0 0);
+  --secondary: oklch(0.24 0.004 0); /* Medium dark grey: #282828 */
+  --secondary-foreground: oklch(0.98 0 0);
+  --muted: oklch(0.2 0.003 0);
+  --muted-foreground: oklch(0.7 0 0); /* Lighter grey subtext */
+  --accent: oklch(0.62 0.22 25);
+  --accent-foreground: oklch(0.98 0 0);
+  --destructive: oklch(0.55 0.22 27);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(0.22 0.003 0); /* Dark thin border: #212121 */
+  --input: oklch(0.22 0.003 0);
+  --ring: oklch(0.62 0.22 25);
+  --brand: oklch(0.62 0.22 25); /* Brand red */
+  --brand-2: oklch(0.7 0.15 40);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  html,
+  body {
+    &::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    &::-webkit-scrollbar-track {
+      background: var(--background);
+    }
+    &::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 9999px;
+      border: 2px solid var(--background);
+    }
+    &::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+}
+
+@utility brand-gradient {
+  background-image: linear-gradient(135deg, var(--brand), var(--brand-2));
+}
+
+@utility brand-text {
+  background-image: linear-gradient(135deg, var(--brand), var(--brand-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@utility card-hover {
+  transition:
+    transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+  &:hover {
+    transform: scale(1.03);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+    background-color: var(--surface-elevated);
+  }
+}
+
+@utility washi-tape {
+  position: relative;
+  &::before {
+    display: none;
+  }
+}
+
+@utility washi-tape-angle {
+  position: relative;
+  &::before {
+    display: none;
+  }
+}
+
+@utility vinyl-record {
+  border-radius: 6px;
+  background: var(--surface);
+  box-shadow: none;
+  position: relative;
+  &::after {
+    display: none;
+  }
+}
+
+@utility paper-shadow {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+@utility journal-border {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+@utility wobbly-border {
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+@utility wobbly-border-hover {
+  transition: none;
+  &:hover {
+    border-radius: 8px;
+  }
+}
+
+@utility notebook-lines {
+  background-image: none;
+}
+
+@utility notebook-margin {
+  position: relative;
+  &::before {
+    display: none;
+  }
+}
+
+@utility grid-paper {
+  background-image: none;
+}
+
+@utility coffee-stain {
+  background-image: none;
+}
+
+@utility sketched-border {
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+
+@utility highlighter-streak {
+  background: transparent;
+  border-radius: 0;
+}
+
+@keyframes eq-bounce {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
