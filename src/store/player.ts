@@ -1,6 +1,14 @@
 import { create } from "zustand";
 import { tracks as allTracks, type Track } from "@/data/catalog";
 
+export type CustomPlaylist = {
+  id: string;
+  title: string;
+  description: string;
+  cover: string;
+  tracks: Track[];
+};
+
 type PlayerState = {
   queue: Track[];
   index: number;
@@ -14,6 +22,7 @@ type PlayerState = {
   downloaded: Set<string>;
   downloadedTracksList: Track[];
   expanded: boolean;
+  customPlaylists: CustomPlaylist[];
   playQueue: (tracks: Track[], startIndex?: number) => void;
   playTrack: (track: Track) => void;
   toggle: () => void;
@@ -32,6 +41,10 @@ type PlayerState = {
   setActiveFullPlayerTab: (tab: "queue" | "lyrics" | "related") => void;
   mobileTabOpen: boolean;
   setMobileTabOpen: (v: boolean) => void;
+  createPlaylist: (title: string, description?: string) => string;
+  deletePlaylist: (id: string) => void;
+  addTrackToPlaylist: (playlistId: string, track: Track) => void;
+  removeTrackFromPlaylist: (playlistId: string, trackId: string) => void;
 };
 
 // Singleton audio player instance
@@ -64,6 +77,24 @@ if (typeof window !== "undefined") {
   });
 }
 
+let initialCustomPlaylists: CustomPlaylist[] = [];
+let initialLikedTracks: Track[] = [];
+let initialLiked: string[] = [];
+let initialDownloadedTracks: Track[] = [];
+let initialDownloaded: string[] = [];
+
+if (typeof window !== "undefined") {
+  try {
+    initialCustomPlaylists = JSON.parse(localStorage.getItem("mutunes-playlists") || "[]");
+    initialLikedTracks = JSON.parse(localStorage.getItem("mutunes-liked-tracks") || "[]");
+    initialLiked = initialLikedTracks.map((t) => t.id);
+    initialDownloadedTracks = JSON.parse(localStorage.getItem("mutunes-downloaded-tracks") || "[]");
+    initialDownloaded = initialDownloadedTracks.map((t) => t.id);
+  } catch (e) {
+    console.error("Failed to load store from localStorage", e);
+  }
+}
+
 export const usePlayer = create<PlayerState>((set, get) => ({
   queue: [],
   index: 0,
@@ -72,10 +103,11 @@ export const usePlayer = create<PlayerState>((set, get) => ({
   volume: 0.8,
   shuffle: false,
   repeat: "off",
-  liked: new Set<string>(),
-  likedTracksList: [],
-  downloaded: new Set<string>(),
-  downloadedTracksList: [],
+  liked: new Set<string>(initialLiked),
+  likedTracksList: initialLikedTracks,
+  downloaded: new Set<string>(initialDownloaded),
+  downloadedTracksList: initialDownloadedTracks,
+  customPlaylists: initialCustomPlaylists,
   expanded: false,
   activeFullPlayerTab: "queue",
   setActiveFullPlayerTab: (tab) => set({ activeFullPlayerTab: tab }),
@@ -205,6 +237,9 @@ export const usePlayer = create<PlayerState>((set, get) => ({
         liked.add(track.id);
         likedTracksList.push(track);
       }
+      if (typeof window !== "undefined") {
+        localStorage.setItem("mutunes-liked-tracks", JSON.stringify(likedTracksList));
+      }
       return { liked, likedTracksList };
     }),
   toggleDownload: (track) =>
@@ -218,13 +253,20 @@ export const usePlayer = create<PlayerState>((set, get) => ({
         downloaded.add(track.id);
         downloadedTracksList.push(track);
       }
+      if (typeof window !== "undefined") {
+        localStorage.setItem("mutunes-downloaded-tracks", JSON.stringify(downloadedTracksList));
+      }
       return { downloaded, downloadedTracksList };
     }),
-  clearCache: () =>
+  clearCache: () => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("mutunes-downloaded-tracks");
+    }
     set(() => ({
       downloaded: new Set<string>(),
       downloadedTracksList: [],
-    })),
+    }));
+  },
   tick: () => {
     const { isPlaying, progress, queue, index, repeat } = get();
     if (!isPlaying || queue.length === 0) return;
@@ -242,6 +284,66 @@ export const usePlayer = create<PlayerState>((set, get) => ({
     }
   },
   setExpanded: (v) => set((s) => ({ expanded: v, mobileTabOpen: v ? s.mobileTabOpen : false })),
+  createPlaylist: (title, description = "") => {
+    const id = `custom-${Date.now()}`;
+    const newPlaylist: CustomPlaylist = {
+      id,
+      title,
+      description,
+      cover:
+        "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=640&q=80",
+      tracks: [],
+    };
+    set((s) => {
+      const updated = [...s.customPlaylists, newPlaylist];
+      if (typeof window !== "undefined") {
+        localStorage.setItem("mutunes-playlists", JSON.stringify(updated));
+      }
+      return { customPlaylists: updated };
+    });
+    return id;
+  },
+  deletePlaylist: (id) => {
+    set((s) => {
+      const updated = s.customPlaylists.filter((p) => p.id !== id);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("mutunes-playlists", JSON.stringify(updated));
+      }
+      return { customPlaylists: updated };
+    });
+  },
+  addTrackToPlaylist: (playlistId, track) => {
+    set((s) => {
+      const updated = s.customPlaylists.map((p) => {
+        if (p.id === playlistId) {
+          if (p.tracks.some((t) => t.id === track.id)) return p;
+          const updatedTracks = [...p.tracks, track];
+          const cover = p.tracks.length === 0 && track.coverUrl ? track.coverUrl : p.cover;
+          return { ...p, tracks: updatedTracks, cover };
+        }
+        return p;
+      });
+      if (typeof window !== "undefined") {
+        localStorage.setItem("mutunes-playlists", JSON.stringify(updated));
+      }
+      return { customPlaylists: updated };
+    });
+  },
+  removeTrackFromPlaylist: (playlistId, trackId) => {
+    set((s) => {
+      const updated = s.customPlaylists.map((p) => {
+        if (p.id === playlistId) {
+          const updatedTracks = p.tracks.filter((t) => t.id !== trackId);
+          return { ...p, tracks: updatedTracks };
+        }
+        return p;
+      });
+      if (typeof window !== "undefined") {
+        localStorage.setItem("mutunes-playlists", JSON.stringify(updated));
+      }
+      return { customPlaylists: updated };
+    });
+  },
 }));
 
 export const useCurrentTrack = () => {

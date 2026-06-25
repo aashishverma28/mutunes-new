@@ -11,7 +11,18 @@ import {
   Mic2,
   Sparkles,
   Music2,
+  Plus,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+} from "@/components/ui/dropdown-menu";
 import { usePlayer, useCurrentTrack } from "@/store/player";
 import { getAlbum, getArtist, formatDuration, type Track } from "@/data/catalog";
 import { searchSaavnSongs, getLyrics, type LyricsLine } from "@/lib/saavn";
@@ -44,6 +55,9 @@ export function FullPlayer() {
     setActiveFullPlayerTab,
     mobileTabOpen,
     setMobileTabOpen,
+    customPlaylists,
+    addTrackToPlaylist,
+    createPlaylist,
   } = usePlayer();
 
   const track = useCurrentTrack();
@@ -213,14 +227,67 @@ export function FullPlayer() {
                 {track.artistName || artist?.name || "Unknown Artist"}
               </Link>
             </div>
-            <button
-              onClick={() => toggleLike(track)}
-              className={`rounded-full p-2 hover:bg-white/5 transition-colors ${
-                isLiked ? "text-primary" : "text-muted-foreground/60 hover:text-foreground"
-              }`}
-            >
-              <Heart className="h-6 w-6" fill={isLiked ? "currentColor" : "none"} />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => toggleLike(track)}
+                className={`rounded-full p-2 hover:bg-white/5 transition-colors ${
+                  isLiked ? "text-primary" : "text-muted-foreground/60 hover:text-foreground"
+                }`}
+              >
+                <Heart className="h-6 w-6" fill={isLiked ? "currentColor" : "none"} />
+              </button>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className="rounded-full p-2 hover:bg-white/5 text-muted-foreground/60 hover:text-foreground transition-colors cursor-pointer"
+                    title="Add to playlist"
+                  >
+                    <Plus className="h-6 w-6" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  className="w-56 bg-background border border-border/80"
+                >
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger className="cursor-pointer">
+                      Add to Playlist
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent className="w-48 bg-background border border-border/80">
+                      {customPlaylists.length === 0 ? (
+                        <div className="px-2 py-1.5 text-xs text-muted-foreground italic">
+                          No custom playlists
+                        </div>
+                      ) : (
+                        customPlaylists.map((p) => (
+                          <DropdownMenuItem
+                            key={p.id}
+                            onClick={() => addTrackToPlaylist(p.id, track)}
+                            className="cursor-pointer"
+                          >
+                            {p.title}
+                          </DropdownMenuItem>
+                        ))
+                      )}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => {
+                          const name = prompt("Enter playlist name:");
+                          if (name && name.trim()) {
+                            const newId = createPlaylist(name.trim());
+                            addTrackToPlaylist(newId, track);
+                          }
+                        }}
+                        className="cursor-pointer text-primary"
+                      >
+                        + Create Playlist
+                      </DropdownMenuItem>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
 
           {/* Seek Progress Bar */}

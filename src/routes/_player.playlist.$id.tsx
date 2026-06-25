@@ -1,14 +1,18 @@
-import { createFileRoute, notFound } from "@tanstack/react-router";
-import { Play, Pause, Heart, Shuffle } from "lucide-react";
+import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
+import { Play, Pause, Heart, Shuffle, Trash2 } from "lucide-react";
 import { getPlaylist, tracksByIds, formatDuration } from "@/data/catalog";
 import { TrackRow } from "@/components/player/TrackRow";
-import { usePlayer, useCurrentTrack } from "@/store/player";
+import { usePlayer, useCurrentTrack, type CustomPlaylist } from "@/store/player";
 
 export const Route = createFileRoute("/_player/playlist/$id")({
   loader: ({ params }) => {
+    const customPlaylist = usePlayer.getState().customPlaylists.find((p) => p.id === params.id);
+    if (customPlaylist) {
+      return { playlist: customPlaylist, isCustom: true };
+    }
     const playlist = getPlaylist(params.id);
     if (!playlist) throw notFound();
-    return { playlist };
+    return { playlist, isCustom: false };
   },
   head: ({ loaderData }) => ({
     meta: loaderData
@@ -27,10 +31,11 @@ export const Route = createFileRoute("/_player/playlist/$id")({
 });
 
 function PlaylistPage() {
-  const { playlist } = Route.useLoaderData();
-  const queue = tracksByIds(playlist.trackIds);
+  const { playlist, isCustom } = Route.useLoaderData();
+  const navigate = useNavigate();
+  const queue = isCustom ? (playlist as CustomPlaylist).tracks : tracksByIds(playlist.trackIds);
   const totalSec = queue.reduce((a, t) => a + t.duration, 0);
-  const { playQueue, toggle, isPlaying } = usePlayer();
+  const { playQueue, toggle, isPlaying, deletePlaylist } = usePlayer();
   const current = useCurrentTrack();
   const playingThis = current && queue.some((t) => t.id === current.id);
 
@@ -107,6 +112,22 @@ function PlaylistPage() {
         >
           <Heart className="h-5 w-5" />
         </button>
+
+        {isCustom && (
+          <button
+            onClick={() => {
+              if (confirm("Are you sure you want to delete this playlist?")) {
+                deletePlaylist(playlist.id);
+                navigate({ to: "/library" });
+              }
+            }}
+            className="rounded-full border border-border p-3 text-muted-foreground hover:bg-red-500/10 hover:text-red-500 transition-colors cursor-pointer"
+            aria-label="Delete playlist"
+            title="Delete Playlist"
+          >
+            <Trash2 className="h-5 w-5" />
+          </button>
+        )}
       </div>
 
       {/* Tracklist table */}
@@ -120,7 +141,7 @@ function PlaylistPage() {
         </div>
         <div className="mt-1 divide-y divide-border/20">
           {queue.map((t, i) => (
-            <TrackRow key={t.id} track={t} index={i} queue={queue} />
+            <TrackRow key={t.id} track={t} index={i} queue={queue} playlistId={playlist.id} />
           ))}
         </div>
       </div>

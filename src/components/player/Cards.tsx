@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Play, Loader2 } from "lucide-react";
-import { usePlayer } from "@/store/player";
+import { usePlayer, type CustomPlaylist } from "@/store/player";
 import { useState } from "react";
 import { getSaavnAlbumSongs } from "@/lib/saavn";
 import {
@@ -28,8 +28,12 @@ function PlayButton({ onClick }: { onClick: () => void }) {
   );
 }
 
-export function PlaylistCard({ playlist }: { playlist: Playlist }) {
+export function PlaylistCard({ playlist }: { playlist: Playlist | CustomPlaylist }) {
   const { playQueue } = usePlayer();
+  const getTracks = () => {
+    if ("tracks" in playlist) return playlist.tracks;
+    return tracksByIds(playlist.trackIds || []);
+  };
   return (
     <Link
       to="/playlist/$id"
@@ -43,7 +47,7 @@ export function PlaylistCard({ playlist }: { playlist: Playlist }) {
           className="aspect-square w-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
         <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-        <PlayButton onClick={() => playQueue(tracksByIds(playlist.trackIds))} />
+        <PlayButton onClick={() => playQueue(getTracks())} />
       </div>
 
       <div className="mt-3">
@@ -51,7 +55,7 @@ export function PlaylistCard({ playlist }: { playlist: Playlist }) {
           {playlist.title}
         </div>
         <div className="mt-1 line-clamp-2 text-xs text-muted-foreground leading-relaxed">
-          {playlist.description}
+          {playlist.description || `${getTracks().length} songs`}
         </div>
       </div>
     </Link>

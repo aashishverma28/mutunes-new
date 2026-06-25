@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Download, ListMusic, CheckCircle2 } from "lucide-react";
+import { Download, ListMusic, CheckCircle2, Plus } from "lucide-react";
 import { playlists } from "@/data/catalog";
 import { PlaylistCard } from "@/components/player/Cards";
 import { usePlayer } from "@/store/player";
@@ -22,6 +22,8 @@ function Library() {
   const [tab, setTab] = useState<Tab>("playlists");
   const likedTracks = usePlayer((s) => s.likedTracksList);
   const downloadedTracks = usePlayer((s) => s.downloadedTracksList);
+  const customPlaylists = usePlayer((s) => s.customPlaylists);
+  const createPlaylist = usePlayer((s) => s.createPlaylist);
   const downloadBytes = downloadedTracks.reduce((a, t) => a + (t.duration || 200) * 40_000, 0);
 
   return (
@@ -58,6 +60,36 @@ function Library() {
           <section>
             <h2 className="mb-4 text-xl font-bold text-foreground">Playlists</h2>
             <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-5">
+              {/* Create Playlist Button Card */}
+              <button
+                onClick={() => {
+                  const name = prompt("Enter playlist name:");
+                  if (name && name.trim()) {
+                    createPlaylist(name.trim());
+                  }
+                }}
+                className="group flex flex-col text-left cursor-pointer transition-all focus:outline-none"
+              >
+                <div className="relative flex aspect-square w-full items-center justify-center rounded-xl border-2 border-dashed border-border hover:border-primary/50 bg-surface/30 group-hover:bg-surface/50 transition-colors">
+                  <div className="flex flex-col items-center gap-2 text-muted-foreground group-hover:text-primary transition-colors">
+                    <Plus className="h-8 w-8" />
+                    <span className="text-xs font-bold uppercase tracking-wider">New Playlist</span>
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="font-semibold text-sm text-foreground truncate group-hover:underline">
+                    Create Playlist
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">Add custom mix</div>
+                </div>
+              </button>
+
+              {/* Custom Playlists */}
+              {customPlaylists.map((p) => (
+                <PlaylistCard key={p.id} playlist={p} />
+              ))}
+
+              {/* Static Playlists */}
               {playlists.map((p) => (
                 <PlaylistCard key={p.id} playlist={p} />
               ))}

@@ -1,6 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Home, Library, Heart, Search, ListMusic } from "lucide-react";
 import { playlists } from "@/data/catalog";
+import { usePlayer } from "@/store/player";
 
 const nav = [
   { to: "/", label: "Home", icon: Home, exact: true },
@@ -10,6 +11,7 @@ const nav = [
 
 export function Sidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const customPlaylists = usePlayer((s) => s.customPlaylists);
   return (
     <aside className="hidden md:flex w-64 shrink-0 flex-col gap-6 p-4 border-r border-border/40 bg-background">
       {/* Navigation list */}
@@ -59,6 +61,27 @@ export function Sidebar() {
             </div>
           </Link>
 
+          {/* Custom user playlists first */}
+          {customPlaylists.map((p) => (
+            <Link
+              key={p.id}
+              to="/playlist/$id"
+              params={{ id: p.id }}
+              className="flex items-center gap-3 rounded-xl px-2 py-2 text-sm transition-all hover:bg-surface-elevated"
+            >
+              <img
+                src={p.cover}
+                alt=""
+                className="h-9 w-9 rounded object-cover border border-border/50"
+              />
+              <div className="min-w-0">
+                <div className="truncate font-medium text-sm text-foreground/95">{p.title}</div>
+                <div className="truncate text-[10px] text-muted-foreground">Custom Playlist</div>
+              </div>
+            </Link>
+          ))}
+
+          {/* Static playlists */}
           {playlists
             .filter((p) => p.id !== "p8")
             .map((p) => (

@@ -1,22 +1,45 @@
-import { Play, Heart, MoreHorizontal, Star, Download, CheckCircle2 } from "lucide-react";
+import { Play, Heart, MoreHorizontal, Download, CheckCircle2 } from "lucide-react";
 import { usePlayer, useCurrentTrack } from "@/store/player";
 import { getAlbum, getArtist, formatDuration, type Track } from "@/data/catalog";
 import { EqBars } from "./NowPlaying";
 import { Link } from "@tanstack/react-router";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export function TrackRow({
   track,
   index,
   queue,
   showAlbum = true,
+  playlistId,
 }: {
   track: Track;
   index: number;
   queue: Track[];
   showAlbum?: boolean;
+  playlistId?: string;
 }) {
-  const { playQueue, toggle, isPlaying, toggleLike, liked, toggleDownload, downloaded } =
-    usePlayer();
+  const {
+    playQueue,
+    toggle,
+    isPlaying,
+    toggleLike,
+    liked,
+    toggleDownload,
+    downloaded,
+    customPlaylists,
+    addTrackToPlaylist,
+    removeTrackFromPlaylist,
+    createPlaylist,
+  } = usePlayer();
   const current = useCurrentTrack();
   const isCurrent = current?.id === track.id;
   const album = getAlbum(track.albumId);
@@ -109,9 +132,86 @@ export function TrackRow({
 
       <div className="flex items-center justify-end gap-3 text-xs text-muted-foreground/60 tabular-nums">
         {formatDuration(track.duration)}
-        <button className="hidden text-muted-foreground/60 hover:text-foreground group-hover:block cursor-pointer p-1 rounded-full hover:bg-white/5">
-          <MoreHorizontal className="h-4 w-4" />
-        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="text-muted-foreground/60 hover:text-foreground md:hidden md:group-hover:block cursor-pointer p-1 rounded-full hover:bg-white/5">
+              <MoreHorizontal className="h-4 w-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56 bg-background border border-border/80">
+            <DropdownMenuItem onClick={() => playQueue([track])} className="cursor-pointer">
+              Play Song
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                const { queue: currentQueue } = usePlayer.getState();
+                usePlayer.setState({ queue: [...currentQueue, track] });
+              }}
+              className="cursor-pointer"
+            >
+              Add to Queue
+            </DropdownMenuItem>
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger className="cursor-pointer">
+                Add to Playlist
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="w-48 bg-background border border-border/80">
+                {customPlaylists.length === 0 ? (
+                  <div className="px-2 py-1.5 text-xs text-muted-foreground italic">
+                    No custom playlists
+                  </div>
+                ) : (
+                  customPlaylists.map((p) => (
+                    <DropdownMenuItem
+                      key={p.id}
+                      onClick={() => addTrackToPlaylist(p.id, track)}
+                      className="cursor-pointer"
+                    >
+                      {p.title}
+                    </DropdownMenuItem>
+                  ))
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => {
+                    const name = prompt("Enter playlist name:");
+                    if (name && name.trim()) {
+                      const newId = createPlaylist(name.trim());
+                      addTrackToPlaylist(newId, track);
+                    }
+                  }}
+                  className="cursor-pointer text-primary"
+                >
+                  + Create Playlist
+                </DropdownMenuItem>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+
+            {playlistId && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => removeTrackFromPlaylist(playlistId, track.id)}
+                  className="cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive"
+                >
+                  Remove from Playlist
+                </DropdownMenuItem>
+              </>
+            )}
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuItem onClick={() => toggleLike(track)} className="cursor-pointer">
+              {isLiked ? "Remove from Liked" : "Like Song"}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => toggleDownload(track)} className="cursor-pointer">
+              {isDownloaded ? "Remove Download" : "Download"}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );
