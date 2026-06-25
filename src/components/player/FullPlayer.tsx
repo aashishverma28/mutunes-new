@@ -151,23 +151,28 @@ export function FullPlayer() {
 
       {/* Header bar */}
       <header className="flex h-16 shrink-0 items-center justify-between px-6 border-b border-white/5 bg-black/25">
-        {mobileTabOpen ? (
-          <button
-            onClick={() => setMobileTabOpen(false)}
-            className="lg:hidden rounded-full p-2 text-muted-foreground hover:bg-white/5 hover:text-foreground transition-colors"
-            title="Back to player"
-          >
-            <ChevronLeft className="h-6 w-6" />
-          </button>
-        ) : (
-          <button
-            onClick={() => setExpanded(false)}
-            className="rounded-full p-2 text-muted-foreground hover:bg-white/5 hover:text-foreground transition-colors"
-            title="Minimize player"
-          >
+        <button
+          onClick={() => {
+            if (mobileTabOpen) {
+              setMobileTabOpen(false);
+            } else {
+              setExpanded(false);
+            }
+          }}
+          className="rounded-full p-2 text-muted-foreground hover:bg-white/5 hover:text-foreground transition-colors cursor-pointer"
+          title={mobileTabOpen ? "Back to player" : "Minimize player"}
+        >
+          <span className="hidden lg:block">
             <ChevronDown className="h-6 w-6" />
-          </button>
-        )}
+          </span>
+          <span className="lg:hidden">
+            {mobileTabOpen ? (
+              <ChevronLeft className="h-6 w-6" />
+            ) : (
+              <ChevronDown className="h-6 w-6" />
+            )}
+          </span>
+        </button>
         <div className="text-center">
           <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">
             {mobileTabOpen ? "Active Tab" : "Playing From"}
