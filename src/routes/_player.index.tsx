@@ -301,15 +301,15 @@ function Home() {
       {/* Greeting and Category Pills */}
       <div>
         <h1 className="text-3xl font-extrabold text-foreground tracking-tight">{greeting}</h1>
-        {/* Pills container */}
-        <div className="mt-4 flex flex-wrap gap-2.5">
+        {/* Pills container - horizontally scrollable on mobile */}
+        <div className="mt-4 flex gap-2.5 overflow-x-auto pb-2 -mx-6 px-6 md:mx-0 md:px-0 no-scrollbar snap-x scroll-smooth whitespace-nowrap">
           {CATEGORIES.map((c) => {
             const active = activeCategory === c.id;
             return (
               <button
                 key={c.id}
                 onClick={() => setActiveCategory(c.id)}
-                className={`rounded-full px-4 py-2 text-sm font-semibold transition-all cursor-pointer border ${
+                className={`rounded-full px-4 py-2 text-sm font-semibold transition-all cursor-pointer border snap-start shrink-0 ${
                   active
                     ? "bg-white text-black border-white shadow-sm"
                     : "bg-surface-elevated text-foreground border-border hover:bg-white/10"

@@ -2,6 +2,7 @@ import { createFileRoute, Outlet, Link } from "@tanstack/react-router";
 import { Sidebar } from "@/components/player/Sidebar";
 import { NowPlaying } from "@/components/player/NowPlaying";
 import { FullPlayer } from "@/components/player/FullPlayer";
+import { MobileNav } from "@/components/player/MobileNav";
 import { Settings, User } from "lucide-react";
 
 export const Route = createFileRoute("/_player")({
@@ -63,6 +64,7 @@ function PlayerLayout() {
         </main>
       </div>
       <NowPlaying />
+      <MobileNav />
       <FullPlayer />
     </div>
   );

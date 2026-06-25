@@ -273,26 +273,22 @@ export async function getLyrics(
     if (!res.ok) {
       // Try search as fallback
       const searchParams = new URLSearchParams({ q: `${artistName} ${title}` });
-      const searchRes = await fetch(
-        `https://lrclib.net/api/search?${searchParams.toString()}`,
-      );
+      const searchRes = await fetch(`https://lrclib.net/api/search?${searchParams.toString()}`);
       if (!searchRes.ok) return empty;
       const searchJson: unknown[] = await searchRes.json();
       if (!Array.isArray(searchJson) || searchJson.length === 0) return empty;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const first = searchJson[0] as any;
-      const plain = (first.plainLyrics as string | null)
-        ?.split("\n")
-        .map((l: string) => l.trim()) ?? [];
+      const plain =
+        (first.plainLyrics as string | null)?.split("\n").map((l: string) => l.trim()) ?? [];
       const synced = first.syncedLyrics ? parseLrc(first.syncedLyrics as string) : [];
       return { synced, plain, found: plain.length > 0 || synced.length > 0 };
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const json = (await res.json()) as any;
-    const plain = (json.plainLyrics as string | null)
-      ?.split("\n")
-      .map((l: string) => l.trim()) ?? [];
+    const plain =
+      (json.plainLyrics as string | null)?.split("\n").map((l: string) => l.trim()) ?? [];
     const synced = json.syncedLyrics ? parseLrc(json.syncedLyrics as string) : [];
     return { synced, plain, found: plain.length > 0 || synced.length > 0 };
   } catch {

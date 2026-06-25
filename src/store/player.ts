@@ -30,6 +30,8 @@ type PlayerState = {
   setExpanded: (v: boolean) => void;
   activeFullPlayerTab: "queue" | "lyrics" | "related";
   setActiveFullPlayerTab: (tab: "queue" | "lyrics" | "related") => void;
+  mobileTabOpen: boolean;
+  setMobileTabOpen: (v: boolean) => void;
 };
 
 // Singleton audio player instance
@@ -77,6 +79,8 @@ export const usePlayer = create<PlayerState>((set, get) => ({
   expanded: false,
   activeFullPlayerTab: "queue",
   setActiveFullPlayerTab: (tab) => set({ activeFullPlayerTab: tab }),
+  mobileTabOpen: false,
+  setMobileTabOpen: (v) => set({ mobileTabOpen: v }),
   playQueue: (tracks, startIndex = 0) => {
     set({ queue: tracks, index: startIndex, isPlaying: true, progress: 0 });
     const track = tracks[startIndex];
@@ -237,7 +241,7 @@ export const usePlayer = create<PlayerState>((set, get) => ({
       set({ progress: progress + 1 });
     }
   },
-  setExpanded: (v) => set({ expanded: v }),
+  setExpanded: (v) => set((s) => ({ expanded: v, mobileTabOpen: v ? s.mobileTabOpen : false })),
 }));
 
 export const useCurrentTrack = () => {

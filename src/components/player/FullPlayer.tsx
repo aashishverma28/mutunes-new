@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
   ChevronDown,
+  ChevronLeft,
   Heart,
   Pause,
   Play,
@@ -17,8 +18,8 @@ import { searchSaavnSongs, getLyrics, type LyricsLine } from "@/lib/saavn";
 import { Link } from "@tanstack/react-router";
 
 type LyricsState = {
-  lines: LyricsLine[];     // synced lines (with timestamps)
-  plain: string[];         // plain fallback lines
+  lines: LyricsLine[]; // synced lines (with timestamps)
+  plain: string[]; // plain fallback lines
   loading: boolean;
   found: boolean;
   isSynced: boolean;
@@ -41,6 +42,8 @@ export function FullPlayer() {
     playQueue,
     activeFullPlayerTab,
     setActiveFullPlayerTab,
+    mobileTabOpen,
+    setMobileTabOpen,
   } = usePlayer();
 
   const track = useCurrentTrack();
@@ -70,12 +73,7 @@ export function FullPlayer() {
     if (!track || lyricsTrackId.current === track.id) return;
     lyricsTrackId.current = track.id;
     setLyrics({ lines: [], plain: [], loading: true, found: false, isSynced: false });
-    getLyrics(
-      track.title,
-      track.artistName || "",
-      track.albumName,
-      track.duration,
-    )
+    getLyrics(track.title, track.artistName || "", track.albumName, track.duration)
       .then((result) => {
         setLyrics({
           lines: result.synced,
@@ -139,30 +137,60 @@ export function FullPlayer() {
 
       {/* Header bar */}
       <header className="flex h-16 shrink-0 items-center justify-between px-6 border-b border-white/5 bg-black/25">
-        <button
-          onClick={() => setExpanded(false)}
-          className="rounded-full p-2 text-muted-foreground hover:bg-white/5 hover:text-foreground transition-colors"
-          title="Minimize player"
-        >
-          <ChevronDown className="h-6 w-6" />
-        </button>
+        {mobileTabOpen ? (
+          <button
+            onClick={() => setMobileTabOpen(false)}
+            className="lg:hidden rounded-full p-2 text-muted-foreground hover:bg-white/5 hover:text-foreground transition-colors"
+            title="Back to player"
+          >
+            <ChevronLeft className="h-6 w-6" />
+          </button>
+        ) : (
+          <button
+            onClick={() => setExpanded(false)}
+            className="rounded-full p-2 text-muted-foreground hover:bg-white/5 hover:text-foreground transition-colors"
+            title="Minimize player"
+          >
+            <ChevronDown className="h-6 w-6" />
+          </button>
+        )}
         <div className="text-center">
           <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">
-            Playing From
+            {mobileTabOpen ? "Active Tab" : "Playing From"}
           </div>
           <div className="text-sm font-semibold text-foreground max-w-xs truncate">
-            {track.albumName || album?.title || "JioSaavn Stream"}
+            {mobileTabOpen
+              ? activeFullPlayerTab === "queue"
+                ? "Up Next"
+                : activeFullPlayerTab === "lyrics"
+                  ? "Lyrics"
+                  : "Related"
+              : track.albumName || album?.title || "JioSaavn Stream"}
           </div>
         </div>
-        <div className="w-10" />
+        {mobileTabOpen ? (
+          <button
+            onClick={() => setExpanded(false)}
+            className="lg:hidden rounded-full p-2 text-muted-foreground hover:bg-white/5 hover:text-foreground transition-colors"
+            title="Minimize player"
+          >
+            <ChevronDown className="h-6 w-6" />
+          </button>
+        ) : (
+          <div className="w-10" />
+        )}
       </header>
 
       {/* Main split grid: Left (Artwork + Mini Controls), Right (Tabs + Info Panel) */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 min-h-0 w-full max-w-7xl mx-auto px-6 py-6 items-center gap-8 lg:gap-12">
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 min-h-0 w-full max-w-7xl mx-auto px-6 py-4 items-center gap-8 lg:gap-12">
         {/* Left Side: 12-col layout (takes up 6 cols) */}
-        <div className="lg:col-span-6 flex flex-col justify-center items-center h-full max-w-md mx-auto w-full">
+        <div
+          className={`lg:col-span-6 flex flex-col justify-center items-center h-full max-w-md mx-auto w-full ${
+            mobileTabOpen ? "hidden lg:flex" : "flex"
+          }`}
+        >
           {/* Big Square Album Art */}
-          <div className="relative aspect-square w-full rounded-2xl overflow-hidden shadow-2xl border border-white/10 group bg-surface">
+          <div className="relative aspect-square w-[85%] sm:w-full rounded-2xl overflow-hidden shadow-2xl border border-white/10 group bg-surface">
             <img
               src={track.coverUrl || album?.cover}
               alt=""
@@ -171,23 +199,23 @@ export function FullPlayer() {
           </div>
 
           {/* Media Info (under artwork) */}
-          <div className="w-full mt-6 flex items-center justify-between">
+          <div className="w-full mt-5 flex items-center justify-between px-2 sm:px-0">
             <div className="min-w-0 pr-4">
-              <h1 className="text-2xl font-bold tracking-tight text-foreground truncate">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground truncate">
                 {track.title}
               </h1>
               <Link
                 to="/artist/$id"
                 params={{ id: track.artistId }}
                 onClick={() => setExpanded(false)}
-                className="text-muted-foreground text-sm mt-1 truncate hover:underline hover:text-foreground transition-colors block"
+                className="text-muted-foreground text-sm mt-0.5 truncate hover:underline hover:text-foreground transition-colors block"
               >
                 {track.artistName || artist?.name || "Unknown Artist"}
               </Link>
             </div>
             <button
               onClick={() => toggleLike(track)}
-              className={`rounded-full p-2.5 hover:bg-white/5 transition-colors ${
+              className={`rounded-full p-2 hover:bg-white/5 transition-colors ${
                 isLiked ? "text-primary" : "text-muted-foreground/60 hover:text-foreground"
               }`}
             >
@@ -196,7 +224,7 @@ export function FullPlayer() {
           </div>
 
           {/* Seek Progress Bar */}
-          <div className="w-full mt-5">
+          <div className="w-full mt-4 px-2 sm:px-0">
             <div className="relative h-1.5 group cursor-pointer overflow-visible rounded-full">
               <input
                 type="range"
@@ -221,7 +249,7 @@ export function FullPlayer() {
           </div>
 
           {/* Big Transport Controls */}
-          <div className="mt-6 flex items-center justify-center gap-8">
+          <div className="mt-5 flex items-center justify-center gap-8">
             <button
               onClick={prev}
               className="text-muted-foreground hover:text-foreground hover:bg-white/5 rounded-full p-3 transition-colors active:scale-90"
@@ -232,13 +260,13 @@ export function FullPlayer() {
 
             <button
               onClick={toggle}
-              className="grid h-16 w-16 place-items-center rounded-full bg-foreground text-background shadow-lg hover:scale-105 active:scale-95 transition-transform"
+              className="grid h-14 w-14 sm:h-16 sm:w-16 place-items-center rounded-full bg-foreground text-background shadow-lg hover:scale-105 active:scale-95 transition-transform"
               aria-label={isPlaying ? "Pause" : "Play"}
             >
               {isPlaying ? (
-                <Pause className="h-7 w-7" fill="currentColor" />
+                <Pause className="h-6 w-6 sm:h-7 sm:w-7" fill="currentColor" />
               ) : (
-                <Play className="h-7 w-7 translate-x-0.5" fill="currentColor" />
+                <Play className="h-6 w-6 sm:h-7 sm:w-7 translate-x-0.5" fill="currentColor" />
               )}
             </button>
 
@@ -250,10 +278,35 @@ export function FullPlayer() {
               <SkipForward className="h-6 w-6" fill="currentColor" />
             </button>
           </div>
+
+          {/* Mobile Tab Button Row under controls */}
+          <div className="lg:hidden w-full mt-6 flex border-t border-white/5 pt-4.5 items-center justify-around shrink-0">
+            {[
+              { id: "queue" as const, label: "Up Next", icon: ListMusic },
+              { id: "lyrics" as const, label: "Lyrics", icon: Mic2 },
+              { id: "related" as const, label: "Related", icon: Sparkles },
+            ].map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                onClick={() => {
+                  setActiveFullPlayerTab(id);
+                  setMobileTabOpen(true);
+                }}
+                className="flex flex-col items-center gap-1.5 py-1 px-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80 hover:text-foreground active:scale-95 transition-transform"
+              >
+                <Icon className="h-5 w-5" />
+                <span>{label}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Right Side: Tab Panel (takes up 6 cols) */}
-        <div className="lg:col-span-6 flex flex-col h-full min-h-[350px] lg:h-[80%] bg-surface/50 border border-white/5 rounded-2xl backdrop-blur-md overflow-hidden">
+        <div
+          className={`lg:col-span-6 flex flex-col h-full min-h-[300px] lg:h-[80%] bg-surface/50 border border-white/5 rounded-2xl backdrop-blur-md overflow-hidden ${
+            mobileTabOpen ? "flex" : "hidden lg:flex"
+          }`}
+        >
           {/* Tab Selection Row */}
           <div className="flex border-b border-white/5 bg-black/20 shrink-0">
             {[
@@ -383,7 +436,9 @@ export function FullPlayer() {
                                 ? "text-muted-foreground opacity-30 hover:opacity-60"
                                 : "text-muted-foreground opacity-50 hover:opacity-70"
                           }`}
-                          style={isActive ? { transform: "scale(1.04)", transformOrigin: "center" } : {}}
+                          style={
+                            isActive ? { transform: "scale(1.04)", transformOrigin: "center" } : {}
+                          }
                           onClick={() => seek(line.time)}
                         >
                           {line.text || "♪"}
