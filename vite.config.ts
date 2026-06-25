@@ -4,6 +4,9 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 export default defineConfig({
+  react: {
+    development: false,
+  },
   tanstackStart: {
     server: { entry: "server" },
   },

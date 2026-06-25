@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build",
+    "build": "NODE_ENV=production vite build",
     "build:dev": "vite build --mode development",
     "preview": "vite preview --host",
-    "start": "node .output/server/index.mjs",
+    "start": "NODE_ENV=production node .output/server/index.mjs",
     "lint": "eslint .",
     "format": "prettier --write ."
   },
