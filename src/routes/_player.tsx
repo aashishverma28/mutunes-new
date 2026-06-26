@@ -78,6 +78,9 @@ function PlayerLayout() {
                   {user?.email}
                 </span>
               </div>
+              <DropdownMenuItem asChild className="cursor-pointer text-xs">
+                <Link to="/account">My Account</Link>
+              </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={logout}
                 className="cursor-pointer text-primary focus:bg-primary/10 focus:text-primary mt-1 text-xs"

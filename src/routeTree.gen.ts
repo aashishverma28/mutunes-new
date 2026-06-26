@@ -15,6 +15,7 @@ import { Route as PlayerIndexRouteImport } from './routes/_player.index'
 import { Route as PlayerSettingsRouteImport } from './routes/_player.settings'
 import { Route as PlayerLibraryRouteImport } from './routes/_player.library'
 import { Route as PlayerBrowseRouteImport } from './routes/_player.browse'
+import { Route as PlayerAccountRouteImport } from './routes/_player.account'
 import { Route as PlayerPlaylistIdRouteImport } from './routes/_player.playlist.$id'
 import { Route as PlayerArtistIdRouteImport } from './routes/_player.artist.$id'
 
@@ -47,6 +48,11 @@ const PlayerBrowseRoute = PlayerBrowseRouteImport.update({
   path: '/browse',
   getParentRoute: () => PlayerRoute,
 } as any)
+const PlayerAccountRoute = PlayerAccountRouteImport.update({
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => PlayerRoute,
+} as any)
 const PlayerPlaylistIdRoute = PlayerPlaylistIdRouteImport.update({
   id: '/playlist/$id',
   path: '/playlist/$id',
@@ -61,6 +67,7 @@ const PlayerArtistIdRoute = PlayerArtistIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof PlayerIndexRoute
   '/login': typeof LoginRoute
+  '/account': typeof PlayerAccountRoute
   '/browse': typeof PlayerBrowseRoute
   '/library': typeof PlayerLibraryRoute
   '/settings': typeof PlayerSettingsRoute
@@ -69,6 +76,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
+  '/account': typeof PlayerAccountRoute
   '/browse': typeof PlayerBrowseRoute
   '/library': typeof PlayerLibraryRoute
   '/settings': typeof PlayerSettingsRoute
@@ -80,6 +88,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_player': typeof PlayerRouteWithChildren
   '/login': typeof LoginRoute
+  '/_player/account': typeof PlayerAccountRoute
   '/_player/browse': typeof PlayerBrowseRoute
   '/_player/library': typeof PlayerLibraryRoute
   '/_player/settings': typeof PlayerSettingsRoute
@@ -92,6 +101,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/account'
     | '/browse'
     | '/library'
     | '/settings'
@@ -100,6 +110,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
+    | '/account'
     | '/browse'
     | '/library'
     | '/settings'
@@ -110,6 +121,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_player'
     | '/login'
+    | '/_player/account'
     | '/_player/browse'
     | '/_player/library'
     | '/_player/settings'
@@ -167,6 +179,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlayerBrowseRouteImport
       parentRoute: typeof PlayerRoute
     }
+    '/_player/account': {
+      id: '/_player/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof PlayerAccountRouteImport
+      parentRoute: typeof PlayerRoute
+    }
     '/_player/playlist/$id': {
       id: '/_player/playlist/$id'
       path: '/playlist/$id'
@@ -185,6 +204,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface PlayerRouteChildren {
+  PlayerAccountRoute: typeof PlayerAccountRoute
   PlayerBrowseRoute: typeof PlayerBrowseRoute
   PlayerLibraryRoute: typeof PlayerLibraryRoute
   PlayerSettingsRoute: typeof PlayerSettingsRoute
@@ -194,6 +214,7 @@ interface PlayerRouteChildren {
 }
 
 const PlayerRouteChildren: PlayerRouteChildren = {
+  PlayerAccountRoute: PlayerAccountRoute,
   PlayerBrowseRoute: PlayerBrowseRoute,
   PlayerLibraryRoute: PlayerLibraryRoute,
   PlayerSettingsRoute: PlayerSettingsRoute,
