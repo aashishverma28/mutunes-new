@@ -16,6 +16,7 @@ export type Track = {
   coverUrl?: string;
   artistName?: string;
   albumName?: string;
+  downloadUrl?: { quality: string; url: string }[];
 };
 
 export type Album = {

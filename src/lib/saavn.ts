@@ -12,7 +12,7 @@ export type SaavnTrack = {
 
 // Map Saavn API song object to our internal Track type
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function mapSaavnSong(song: any) {
+export function mapSaavnSong(song: any): Track {
   // Extract artist name robustly
   let artistName = "Unknown Artist";
   if (typeof song.primaryArtists === "string" && song.primaryArtists) {
@@ -59,13 +59,17 @@ export function mapSaavnSong(song: any) {
     albumId: `saavn-album-${song.id}`,
     duration: Number(song.duration) || 180,
     audioUrl: audioUrl,
+    downloadUrl: Array.isArray(song.downloadUrl) ? song.downloadUrl.map((d: any) => ({
+      quality: d.quality || "",
+      url: d.url || d.link || ""
+    })) : undefined,
     coverUrl: coverUrl,
     artistName: artistName,
     albumName: typeof song.album === "object" ? song.album.name : song.album || "Single",
   };
 }
 
-export async function searchSaavnSongs(query: string) {
+export async function searchSaavnSongs(query: string): Promise<Track[]> {
   if (!query.trim()) return [];
   try {
     const response = await fetch(
@@ -85,7 +89,7 @@ export async function searchSaavnSongs(query: string) {
       results = json;
     }
 
-    return (results || []).map(mapSaavnSong).filter((t) => t.audioUrl);
+    return (results || []).map(mapSaavnSong).filter((t: Track) => !!t.audioUrl);
   } catch (error) {
     console.error("Error searching JioSaavn:", error);
     return [];
@@ -188,7 +192,7 @@ export async function getSaavnArtistDetails(id: string) {
     // Map top songs
     let songs: Track[] = [];
     if (Array.isArray(data.topSongs)) {
-      songs = data.topSongs.map(mapSaavnSong).filter((t) => t.audioUrl);
+      songs = data.topSongs.map(mapSaavnSong).filter((t: Track) => !!t.audioUrl);
     }
 
     // Map albums and singles

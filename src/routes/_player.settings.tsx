@@ -205,8 +205,11 @@ function Row({
 }
 
 function Settings() {
-  const [streamQ, setStreamQ] = useState("high");
-  const [downloadQ, setDownloadQ] = useState("high");
+  const streamQ = usePlayer((s) => s.streamQuality);
+  const setStreamQ = usePlayer((s) => s.setStreamQuality);
+  const downloadQ = usePlayer((s) => s.downloadQuality);
+  const setDownloadQ = usePlayer((s) => s.setDownloadQuality);
+
   const [wifiOnly, setWifiOnly] = useState(true);
   const [autoplay, setAutoplay] = useState(true);
   const [crossfade, setCrossfade] = useState(false);
@@ -216,7 +219,12 @@ function Settings() {
 
   const downloadedTracks = usePlayer((s) => s.downloadedTracksList);
   const clearCache = usePlayer((s) => s.clearCache);
-  const cacheBytes = downloadedTracks.reduce((a, t) => a + (t.duration || 200) * 40_000, 0);
+  const cacheBytes = downloadedTracks.reduce((a, t) => {
+    let bytesPerSec = 40_000;
+    if (downloadQ === "normal") bytesPerSec = 20_000;
+    else if (downloadQ === "lossless") bytesPerSec = 180_000;
+    return a + (t.duration || 200) * bytesPerSec;
+  }, 0);
   const cacheMB = (cacheBytes / 1_000_000).toFixed(0);
 
   return (

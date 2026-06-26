@@ -58,6 +58,8 @@ export function FullPlayer() {
     customPlaylists,
     addTrackToPlaylist,
     createPlaylist,
+    streamQuality,
+    setStreamQuality,
   } = usePlayer();
 
   const track = useCurrentTrack();
@@ -76,7 +78,7 @@ export function FullPlayer() {
     if (track?.artistName) {
       searchSaavnSongs(track.artistName)
         .then((res) => {
-          setRelatedTracks(res.filter((t) => t.id !== track.id).slice(0, 6));
+          setRelatedTracks(res.filter((t: Track) => t.id !== track.id).slice(0, 6));
         })
         .catch(() => {});
     }
@@ -220,8 +222,23 @@ export function FullPlayer() {
           {/* Media Info (under artwork) */}
           <div className="w-full mt-5 flex items-center justify-between px-2 sm:px-0">
             <div className="min-w-0 pr-4">
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground truncate">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground truncate flex items-center gap-2">
                 {track.title}
+                {streamQuality === "lossless" && (
+                  <span className="shrink-0 px-1.5 py-0.5 text-[9px] font-extrabold tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded shadow-[0_0_10px_rgba(16,185,129,0.15)] select-none">
+                    LOSSLESS
+                  </span>
+                )}
+                {streamQuality === "hires" && (
+                  <span className="shrink-0 px-1.5 py-0.5 text-[9px] font-extrabold tracking-wider bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded shadow-[0_0_10px_rgba(245,158,11,0.15)] select-none">
+                    HI-RES
+                  </span>
+                )}
+                {streamQuality === "high" && (
+                  <span className="shrink-0 px-1.5 py-0.5 text-[9px] font-extrabold tracking-wider bg-primary/20 text-primary border border-primary/30 rounded select-none">
+                    HQ
+                  </span>
+                )}
               </h1>
               <Link
                 to="/artist/$id"
@@ -233,6 +250,46 @@ export function FullPlayer() {
               </Link>
             </div>
             <div className="flex items-center gap-1">
+              {/* Quality Chooser Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className="rounded-full p-2 hover:bg-white/5 transition-colors cursor-pointer flex items-center justify-center"
+                    title="Audio Quality"
+                  >
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold tracking-wider border transition-all uppercase ${
+                      streamQuality === "lossless" ? "border-emerald-500/30 text-emerald-400 bg-emerald-500/10" :
+                      streamQuality === "hires" ? "border-amber-500/30 text-amber-400 bg-amber-500/10" :
+                      "border-white/20 text-muted-foreground/60 hover:text-foreground hover:border-white/40"
+                    }`}>
+                      {streamQuality === "auto" ? "AUTO" :
+                       streamQuality === "low" ? "96K" :
+                       streamQuality === "normal" ? "160K" :
+                       streamQuality === "high" ? "HQ" :
+                       streamQuality === "lossless" ? "LOSSLESS" : "HI-RES"}
+                    </span>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-44 bg-background border border-border/80 text-xs">
+                  {[
+                    { id: "auto", label: "Auto (Adaptive)" },
+                    { id: "low", label: "Low (96 kbps)" },
+                    { id: "normal", label: "Normal (160 kbps)" },
+                    { id: "high", label: "High (320 kbps)" },
+                    { id: "lossless", label: "Lossless (FLAC)" },
+                    { id: "hires", label: "Hi-Res Lossless" },
+                  ].map((q) => (
+                    <DropdownMenuItem
+                      key={q.id}
+                      onClick={() => setStreamQuality(q.id)}
+                      className={`cursor-pointer ${streamQuality === q.id ? "text-primary font-bold" : ""}`}
+                    >
+                      {q.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
               <button
                 onClick={() => toggleLike(track)}
                 className={`rounded-full p-2 hover:bg-white/5 transition-colors ${

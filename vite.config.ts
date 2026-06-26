@@ -18,11 +18,11 @@ export default defineConfig({
   vite: {
     server: {
       host: true,
-      allowedHosts: "all",
+      allowedHosts: true,
     },
     preview: {
       host: true,
-      allowedHosts: "all",
+      allowedHosts: true,
       port: Number(process.env.PORT) || 3000,
     },
   },

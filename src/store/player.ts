@@ -1,6 +1,44 @@
 import { create } from "zustand";
 import { tracks as allTracks, type Track } from "@/data/catalog";
 
+export function getTrackAudioUrl(track: Track, quality: string): string {
+  if (!track.downloadUrl || track.downloadUrl.length === 0) {
+    return track.audioUrl || "";
+  }
+
+  let targetQuality = "320kbps";
+  if (quality === "low") {
+    targetQuality = "96kbps";
+  } else if (quality === "normal") {
+    targetQuality = "160kbps";
+  } else if (quality === "auto") {
+    if (typeof window !== "undefined" && navigator) {
+      // @ts-ignore
+      const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+      if (connection) {
+        if (connection.saveData) {
+          targetQuality = "96kbps";
+        } else if (connection.effectiveType === "2g" || connection.effectiveType === "3g") {
+          targetQuality = "96kbps";
+        } else if (connection.effectiveType === "4g") {
+          targetQuality = "320kbps";
+        }
+      } else {
+        targetQuality = "160kbps";
+      }
+    } else {
+      targetQuality = "160kbps";
+    }
+  }
+
+  // Find exact match or nearest
+  const match = track.downloadUrl.find((d) => d.quality === targetQuality);
+  if (match) return match.url;
+
+  // Fallback to highest quality available
+  return track.downloadUrl[track.downloadUrl.length - 1]?.url || track.audioUrl || "";
+}
+
 export type CustomPlaylist = {
   id: string;
   title: string;
@@ -23,6 +61,10 @@ type PlayerState = {
   downloadedTracksList: Track[];
   expanded: boolean;
   customPlaylists: CustomPlaylist[];
+  streamQuality: string;
+  downloadQuality: string;
+  setStreamQuality: (q: string) => void;
+  setDownloadQuality: (q: string) => void;
   playQueue: (tracks: Track[], startIndex?: number) => void;
   playTrack: (track: Track) => void;
   toggle: () => void;
@@ -71,7 +113,7 @@ if (typeof window !== "undefined") {
   audio.addEventListener("timeupdate", () => {
     const state = usePlayer.getState();
     const currentTrack = state.queue[state.index];
-    if (audio && !audio.paused && currentTrack?.audioUrl) {
+    if (audio && !audio.paused && currentTrack) {
       usePlayer.setState({ progress: Math.floor(audio.currentTime) });
     }
   });
@@ -82,6 +124,8 @@ let initialLikedTracks: Track[] = [];
 let initialLiked: string[] = [];
 let initialDownloadedTracks: Track[] = [];
 let initialDownloaded: string[] = [];
+let initialStreamQuality = "high";
+let initialDownloadQuality = "high";
 
 if (typeof window !== "undefined") {
   try {
@@ -90,6 +134,8 @@ if (typeof window !== "undefined") {
     initialLiked = initialLikedTracks.map((t) => t.id);
     initialDownloadedTracks = JSON.parse(localStorage.getItem("mutunes-downloaded-tracks") || "[]");
     initialDownloaded = initialDownloadedTracks.map((t) => t.id);
+    initialStreamQuality = localStorage.getItem("mutunes-stream-quality") || "high";
+    initialDownloadQuality = localStorage.getItem("mutunes-download-quality") || "high";
   } catch (e) {
     console.error("Failed to load store from localStorage", e);
   }
@@ -109,6 +155,45 @@ export const usePlayer = create<PlayerState>((set, get) => ({
   downloadedTracksList: initialDownloadedTracks,
   customPlaylists: initialCustomPlaylists,
   expanded: false,
+  streamQuality: initialStreamQuality,
+  downloadQuality: initialDownloadQuality,
+  setStreamQuality: (q) => {
+    set({ streamQuality: q });
+    if (typeof window !== "undefined") {
+      localStorage.setItem("mutunes-stream-quality", q);
+    }
+    // Dynamic bitrate switching mid-playback
+    const { queue, index, isPlaying } = get();
+    const track = queue[index];
+    if (audio && track) {
+      const newUrl = getTrackAudioUrl(track, q);
+      if (newUrl && audio.src !== newUrl) {
+        const currentTime = audio.currentTime;
+        const wasPlaying = isPlaying && !audio.paused;
+        
+        audio.pause();
+        audio.src = newUrl;
+        
+        const handleMetadata = () => {
+          if (audio) {
+            audio.currentTime = currentTime;
+            if (wasPlaying) {
+              audio.play().catch((e) => console.error("Audio playback recovery error:", e));
+            }
+          }
+        };
+        
+        audio.addEventListener("loadedmetadata", handleMetadata, { once: true });
+        audio.load();
+      }
+    }
+  },
+  setDownloadQuality: (q) => {
+    set({ downloadQuality: q });
+    if (typeof window !== "undefined") {
+      localStorage.setItem("mutunes-download-quality", q);
+    }
+  },
   activeFullPlayerTab: "queue",
   setActiveFullPlayerTab: (tab) => set({ activeFullPlayerTab: tab }),
   mobileTabOpen: false,
@@ -117,8 +202,9 @@ export const usePlayer = create<PlayerState>((set, get) => ({
     set({ queue: tracks, index: startIndex, isPlaying: true, progress: 0 });
     const track = tracks[startIndex];
     if (audio && track) {
-      if (track.audioUrl) {
-        audio.src = track.audioUrl;
+      const audioUrl = getTrackAudioUrl(track, get().streamQuality);
+      if (audioUrl) {
+        audio.src = audioUrl;
         audio.volume = get().volume;
         audio.play().catch((e) => console.error("Audio playback error:", e));
       } else {
@@ -134,8 +220,9 @@ export const usePlayer = create<PlayerState>((set, get) => ({
       set({ index: i, isPlaying: true, progress: 0 });
       const currentTrack = queue[i];
       if (audio && currentTrack) {
-        if (currentTrack.audioUrl) {
-          audio.src = currentTrack.audioUrl;
+        const audioUrl = getTrackAudioUrl(currentTrack, get().streamQuality);
+        if (audioUrl) {
+          audio.src = audioUrl;
           audio.volume = get().volume;
           audio.play().catch((e) => console.error("Audio playback error:", e));
         } else {
@@ -146,10 +233,13 @@ export const usePlayer = create<PlayerState>((set, get) => ({
     } else {
       const newQueue = [track, ...queue];
       set({ queue: newQueue, index: 0, isPlaying: true, progress: 0 });
-      if (audio && track.audioUrl) {
-        audio.src = track.audioUrl;
-        audio.volume = get().volume;
-        audio.play().catch((e) => console.error("Audio playback error:", e));
+      if (audio) {
+        const audioUrl = getTrackAudioUrl(track, get().streamQuality);
+        if (audioUrl) {
+          audio.src = audioUrl;
+          audio.volume = get().volume;
+          audio.play().catch((e) => console.error("Audio playback error:", e));
+        }
       }
     }
   },
@@ -159,12 +249,15 @@ export const usePlayer = create<PlayerState>((set, get) => ({
     if (audio) {
       if (nextPlaying) {
         const track = get().queue[get().index];
-        if (track?.audioUrl) {
-          if (audio.src !== track.audioUrl) {
-            audio.src = track.audioUrl;
+        if (track) {
+          const audioUrl = getTrackAudioUrl(track, get().streamQuality);
+          if (audioUrl) {
+            if (audio.src !== audioUrl) {
+              audio.src = audioUrl;
+            }
+            audio.volume = get().volume;
+            audio.play().catch((e) => console.error("Audio play error:", e));
           }
-          audio.volume = get().volume;
-          audio.play().catch((e) => console.error("Audio play error:", e));
         }
       } else {
         audio.pause();
@@ -180,8 +273,9 @@ export const usePlayer = create<PlayerState>((set, get) => ({
 
     const nextTrack = queue[nextIdx];
     if (audio && nextTrack) {
-      if (nextTrack.audioUrl) {
-        audio.src = nextTrack.audioUrl;
+      const audioUrl = getTrackAudioUrl(nextTrack, get().streamQuality);
+      if (audioUrl) {
+        audio.src = audioUrl;
         audio.volume = get().volume;
         audio.play().catch((e) => console.error("Audio next error:", e));
       } else {
@@ -201,8 +295,9 @@ export const usePlayer = create<PlayerState>((set, get) => ({
 
     const prevTrack = queue[prevIdx];
     if (audio && prevTrack) {
-      if (prevTrack.audioUrl) {
-        audio.src = prevTrack.audioUrl;
+      const audioUrl = getTrackAudioUrl(prevTrack, get().streamQuality);
+      if (audioUrl) {
+        audio.src = audioUrl;
         audio.volume = get().volume;
         audio.play().catch((e) => console.error("Audio prev error:", e));
       } else {

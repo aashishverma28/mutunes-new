@@ -18,6 +18,12 @@ import {
 import { usePlayer, useCurrentTrack } from "@/store/player";
 import { getAlbum, getArtist, formatDuration } from "@/data/catalog";
 import { Link } from "@tanstack/react-router";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export function EqBars({ playing }: { playing: boolean }) {
   return (
@@ -37,6 +43,25 @@ export function EqBars({ playing }: { playing: boolean }) {
     </div>
   );
 }
+
+const QUALITY_LABELS: Record<string, string> = {
+  auto: "AUTO",
+  low: "96K",
+  normal: "160K",
+  high: "HQ",
+  lossless: "LOSSLESS",
+  hires: "HI-RES",
+};
+
+const getQualityBadgeStyles = (q: string) => {
+  if (q === "lossless") {
+    return "border-emerald-500/30 text-emerald-400 bg-emerald-500/10 hover:border-emerald-500/50 hover:bg-emerald-500/20";
+  }
+  if (q === "hires") {
+    return "border-amber-500/30 text-amber-400 bg-amber-500/10 hover:border-amber-500/50 hover:bg-amber-500/20";
+  }
+  return "border-white/20 text-muted-foreground/80 hover:text-foreground hover:border-white/40 hover:bg-white/5";
+};
 
 export function NowPlaying() {
   const {
@@ -58,6 +83,8 @@ export function NowPlaying() {
     setExpanded,
     setActiveFullPlayerTab,
     setMobileTabOpen,
+    streamQuality,
+    setStreamQuality,
   } = usePlayer();
   const track = useCurrentTrack();
 
@@ -213,6 +240,36 @@ export function NowPlaying() {
           >
             <ListMusic className="h-4.5 w-4.5" />
           </button>
+          <div onClick={(e) => e.stopPropagation()}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className={`px-2 py-0.5 rounded text-[10px] font-extrabold tracking-wider border transition-all uppercase cursor-pointer ${getQualityBadgeStyles(streamQuality)}`}
+                  title="Audio Quality"
+                >
+                  {QUALITY_LABELS[streamQuality] || "HQ"}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44 bg-background border border-border/80 text-xs">
+                {[
+                  { id: "auto", label: "Auto (Adaptive)" },
+                  { id: "low", label: "Low (96 kbps)" },
+                  { id: "normal", label: "Normal (160 kbps)" },
+                  { id: "high", label: "High (320 kbps)" },
+                  { id: "lossless", label: "Lossless (FLAC)" },
+                  { id: "hires", label: "Hi-Res Lossless" },
+                ].map((q) => (
+                  <DropdownMenuItem
+                    key={q.id}
+                    onClick={() => setStreamQuality(q.id)}
+                    className={`cursor-pointer ${streamQuality === q.id ? "text-primary font-bold" : ""}`}
+                  >
+                    {q.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
           <div className="flex items-center gap-2 group/vol">
             <VolIcon
               onClick={() => setVolume(volume === 0 ? 0.8 : 0)}

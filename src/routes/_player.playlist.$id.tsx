@@ -1,6 +1,6 @@
 import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
 import { Play, Pause, Heart, Shuffle, Trash2 } from "lucide-react";
-import { getPlaylist, tracksByIds, formatDuration } from "@/data/catalog";
+import { getPlaylist, tracksByIds, formatDuration, type Playlist } from "@/data/catalog";
 import { TrackRow } from "@/components/player/TrackRow";
 import { usePlayer, useCurrentTrack, type CustomPlaylist } from "@/store/player";
 
@@ -33,7 +33,7 @@ export const Route = createFileRoute("/_player/playlist/$id")({
 function PlaylistPage() {
   const { playlist, isCustom } = Route.useLoaderData();
   const navigate = useNavigate();
-  const queue = isCustom ? (playlist as CustomPlaylist).tracks : tracksByIds(playlist.trackIds);
+  const queue = isCustom ? (playlist as CustomPlaylist).tracks : tracksByIds((playlist as Playlist).trackIds);
   const totalSec = queue.reduce((a, t) => a + t.duration, 0);
   const { playQueue, toggle, isPlaying, deletePlaylist } = usePlayer();
   const current = useCurrentTrack();
