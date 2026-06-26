@@ -24,7 +24,7 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
-  const search = Route.useSearch();
+  const search = Route.useSearch() as { redirect?: string };
   const navigate = useNavigate();
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
@@ -93,28 +93,6 @@ function LoginPage() {
     }
   };
 
-  const handleDemoBypass = () => {
-    setLoading(true);
-    const demoUser = {
-      id: "demo-user-id",
-      email: "demo@mutunes.com",
-      user_metadata: {
-        full_name: "Demo Listener",
-      },
-      app_metadata: {},
-      aud: "authenticated",
-      created_at: new Date().toISOString(),
-    };
-
-    usePlayer.setState({ user: demoUser as any });
-    if (typeof window !== "undefined") {
-      localStorage.setItem("mutunes-user", JSON.stringify(demoUser));
-    }
-
-    toast.success("Welcome to MUTUNES! Entered via Demo Bypass.");
-    setLoading(false);
-    navigate({ to: search.redirect || "/" });
-  };
 
   return (
     <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-background px-4 py-12 select-none">
@@ -254,24 +232,7 @@ function LoginPage() {
           </button>
         </form>
 
-        {/* Divider */}
-        <div className="relative flex py-5 items-center">
-          <div className="flex-grow border-t border-white/5"></div>
-          <span className="flex-shrink mx-4 text-[10px] text-muted-foreground/40 uppercase tracking-widest font-semibold">
-            Or
-          </span>
-          <div className="flex-grow border-t border-white/5"></div>
-        </div>
 
-        {/* Demo Bypass Action Button */}
-        <button
-          onClick={handleDemoBypass}
-          disabled={loading}
-          className="w-full bg-surface-elevated hover:bg-surface border border-white/5 hover:border-white/10 text-foreground text-xs rounded-xl py-3 font-semibold transition-all hover:scale-101 active:scale-99 cursor-pointer flex items-center justify-center gap-2"
-        >
-          <Sparkles className="h-4 w-4 text-amber-400" />
-          <span>Demo Bypass (Instant Access)</span>
-        </button>
       </div>
     </div>
   );
