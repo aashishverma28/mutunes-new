@@ -1,5 +1,5 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { usePlayer } from "@/store/player";
 import { toast } from "sonner";
@@ -26,6 +26,13 @@ export const Route = createFileRoute("/login")({
 function LoginPage() {
   const search = Route.useSearch() as { redirect?: string };
   const navigate = useNavigate();
+  const user = usePlayer((s) => s.user);
+
+  useEffect(() => {
+    if (user) {
+      navigate({ to: search.redirect || "/" });
+    }
+  }, [user, navigate, search.redirect]);
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

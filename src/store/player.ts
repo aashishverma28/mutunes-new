@@ -572,7 +572,7 @@ if (typeof window !== "undefined") {
     if (session?.user) {
       usePlayer.setState({ user: session.user });
       localStorage.setItem("mutunes-user", JSON.stringify(session.user));
-    } else if (event === "SIGNED_OUT") {
+    } else if (event === "SIGNED_OUT" || (event === "INITIAL_SESSION" && !session)) {
       usePlayer.setState({ user: null });
       localStorage.removeItem("mutunes-user");
     }
