@@ -12,6 +12,9 @@ import {
   Sparkles,
   Music2,
   Plus,
+  Download,
+  CheckCircle2,
+  Loader2,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -60,6 +63,9 @@ export function FullPlayer() {
     createPlaylist,
     streamQuality,
     setStreamQuality,
+    toggleDownload,
+    downloaded,
+    downloadProgress,
   } = usePlayer();
 
   const track = useCurrentTrack();
@@ -297,6 +303,36 @@ export function FullPlayer() {
                 }`}
               >
                 <Heart className="h-6 w-6" fill={isLiked ? "currentColor" : "none"} />
+              </button>
+
+              <button
+                onClick={() => toggleDownload(track)}
+                disabled={downloadProgress[track.id] !== undefined}
+                className={`rounded-full p-2 hover:bg-white/5 transition-colors disabled:cursor-not-allowed ${
+                  downloaded.has(track.id) || downloadProgress[track.id] !== undefined
+                    ? "text-emerald-500"
+                    : "text-muted-foreground/60 hover:text-foreground"
+                }`}
+                title={
+                  downloadProgress[track.id] !== undefined
+                    ? `Downloading (${downloadProgress[track.id]}%)`
+                    : downloaded.has(track.id)
+                      ? "Remove Download"
+                      : "Download for offline listening"
+                }
+              >
+                {downloadProgress[track.id] !== undefined ? (
+                  <div className="relative h-6 w-6 flex items-center justify-center text-primary">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span className="absolute text-[8px] font-sans font-bold leading-none translate-y-[-0.5px]">
+                      {downloadProgress[track.id]}
+                    </span>
+                  </div>
+                ) : downloaded.has(track.id) ? (
+                  <CheckCircle2 className="h-6 w-6 text-emerald-500" />
+                ) : (
+                  <Download className="h-6 w-6" />
+                )}
               </button>
 
               <DropdownMenu>

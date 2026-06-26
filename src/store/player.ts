@@ -2,6 +2,17 @@ import { create } from "zustand";
 import { tracks as allTracks, type Track } from "@/data/catalog";
 import { supabase } from "@/lib/supabase";
 import { type User as SupabaseUser } from "@supabase/supabase-js";
+import { downloadTrack, deleteTrackDownload } from "@/lib/downloadManager";
+import { toast } from "sonner";
+
+let activeBlobUrl: string | null = null;
+
+export function cleanupBlobUrl() {
+  if (activeBlobUrl) {
+    URL.revokeObjectURL(activeBlobUrl);
+    activeBlobUrl = null;
+  }
+}
 
 export function getTrackAudioUrl(track: Track, quality: string): string {
   if (!track.downloadUrl || track.downloadUrl.length === 0) {
@@ -41,6 +52,30 @@ export function getTrackAudioUrl(track: Track, quality: string): string {
   return track.downloadUrl[track.downloadUrl.length - 1]?.url || track.audioUrl || "";
 }
 
+export async function resolveAudioSource(track: Track, quality: string): Promise<string> {
+  if (typeof window === "undefined" || !window.caches) {
+    return getTrackAudioUrl(track, quality);
+  }
+
+  try {
+    const cache = await caches.open("mutunes-tracks-cache");
+    const cacheKey = `https://mutunes-local/track/${track.id}`;
+    const cachedResponse = await cache.match(cacheKey);
+    if (cachedResponse) {
+      const blob = await cachedResponse.blob();
+      cleanupBlobUrl();
+      const blobUrl = URL.createObjectURL(blob);
+      activeBlobUrl = blobUrl;
+      console.log(`[AudioSource] Resolving local cached audio for: ${track.title} (${track.id})`);
+      return blobUrl;
+    }
+  } catch (error) {
+    console.error("[AudioSource] Error matches local cache:", error);
+  }
+
+  return getTrackAudioUrl(track, quality);
+}
+
 export type CustomPlaylist = {
   id: string;
   title: string;
@@ -61,26 +96,27 @@ type PlayerState = {
   likedTracksList: Track[];
   downloaded: Set<string>;
   downloadedTracksList: Track[];
+  downloadProgress: Record<string, number>;
   expanded: boolean;
   customPlaylists: CustomPlaylist[];
   streamQuality: string;
   downloadQuality: string;
   user: SupabaseUser | null;
   logout: () => void;
-  setStreamQuality: (q: string) => void;
+  setStreamQuality: (q: string) => Promise<void> | void;
   setDownloadQuality: (q: string) => void;
-  playQueue: (tracks: Track[], startIndex?: number) => void;
-  playTrack: (track: Track) => void;
-  toggle: () => void;
-  next: () => void;
-  prev: () => void;
+  playQueue: (tracks: Track[], startIndex?: number) => Promise<void> | void;
+  playTrack: (track: Track) => Promise<void> | void;
+  toggle: () => Promise<void> | void;
+  next: () => Promise<void> | void;
+  prev: () => Promise<void> | void;
   seek: (s: number) => void;
   setVolume: (v: number) => void;
   toggleShuffle: () => void;
   cycleRepeat: () => void;
   toggleLike: (track: Track) => void;
-  toggleDownload: (track: Track) => void;
-  clearCache: () => void;
+  toggleDownload: (track: Track) => Promise<void> | void;
+  clearCache: () => Promise<void> | void;
   tick: () => void;
   setExpanded: (v: boolean) => void;
   activeFullPlayerTab: "queue" | "lyrics" | "related";
@@ -167,6 +203,7 @@ export const usePlayer = create<PlayerState>((set, get) => ({
   streamQuality: initialStreamQuality,
   downloadQuality: initialDownloadQuality,
   user: initialUser,
+  downloadProgress: {},
   logout: async () => {
     await supabase.auth.signOut();
     set({ user: null });
@@ -174,7 +211,7 @@ export const usePlayer = create<PlayerState>((set, get) => ({
       localStorage.removeItem("mutunes-user");
     }
   },
-  setStreamQuality: (q) => {
+  setStreamQuality: async (q) => {
     set({ streamQuality: q });
     if (typeof window !== "undefined") {
       localStorage.setItem("mutunes-stream-quality", q);
@@ -182,7 +219,7 @@ export const usePlayer = create<PlayerState>((set, get) => ({
     // Dynamic bitrate switching mid-playback
     const { queue, index, isPlaying } = get();
     const track = queue[index];
-    if (audio && track) {
+    if (audio && track && !audio.src.startsWith("blob:")) {
       const newUrl = getTrackAudioUrl(track, q);
       if (newUrl && audio.src !== newUrl) {
         const currentTime = audio.currentTime;
@@ -215,11 +252,11 @@ export const usePlayer = create<PlayerState>((set, get) => ({
   setActiveFullPlayerTab: (tab) => set({ activeFullPlayerTab: tab }),
   mobileTabOpen: false,
   setMobileTabOpen: (v) => set({ mobileTabOpen: v }),
-  playQueue: (tracks, startIndex = 0) => {
+  playQueue: async (tracks, startIndex = 0) => {
     set({ queue: tracks, index: startIndex, isPlaying: true, progress: 0 });
     const track = tracks[startIndex];
     if (audio && track) {
-      const audioUrl = getTrackAudioUrl(track, get().streamQuality);
+      const audioUrl = await resolveAudioSource(track, get().streamQuality);
       if (audioUrl) {
         audio.src = audioUrl;
         audio.volume = get().volume;
@@ -230,14 +267,14 @@ export const usePlayer = create<PlayerState>((set, get) => ({
       }
     }
   },
-  playTrack: (track) => {
+  playTrack: async (track) => {
     const { queue } = get();
     const i = queue.findIndex((t) => t.id === track.id);
     if (i >= 0) {
       set({ index: i, isPlaying: true, progress: 0 });
       const currentTrack = queue[i];
       if (audio && currentTrack) {
-        const audioUrl = getTrackAudioUrl(currentTrack, get().streamQuality);
+        const audioUrl = await resolveAudioSource(currentTrack, get().streamQuality);
         if (audioUrl) {
           audio.src = audioUrl;
           audio.volume = get().volume;
@@ -251,7 +288,7 @@ export const usePlayer = create<PlayerState>((set, get) => ({
       const newQueue = [track, ...queue];
       set({ queue: newQueue, index: 0, isPlaying: true, progress: 0 });
       if (audio) {
-        const audioUrl = getTrackAudioUrl(track, get().streamQuality);
+        const audioUrl = await resolveAudioSource(track, get().streamQuality);
         if (audioUrl) {
           audio.src = audioUrl;
           audio.volume = get().volume;
@@ -260,14 +297,14 @@ export const usePlayer = create<PlayerState>((set, get) => ({
       }
     }
   },
-  toggle: () => {
+  toggle: async () => {
     const nextPlaying = !get().isPlaying;
     set({ isPlaying: nextPlaying });
     if (audio) {
       if (nextPlaying) {
         const track = get().queue[get().index];
         if (track) {
-          const audioUrl = getTrackAudioUrl(track, get().streamQuality);
+          const audioUrl = await resolveAudioSource(track, get().streamQuality);
           if (audioUrl) {
             if (audio.src !== audioUrl) {
               audio.src = audioUrl;
@@ -281,7 +318,7 @@ export const usePlayer = create<PlayerState>((set, get) => ({
       }
     }
   },
-  next: () => {
+  next: async () => {
     const { queue, index, shuffle, repeat } = get();
     if (queue.length === 0) return;
     let nextIdx = shuffle ? Math.floor(Math.random() * queue.length) : index + 1;
@@ -290,7 +327,7 @@ export const usePlayer = create<PlayerState>((set, get) => ({
 
     const nextTrack = queue[nextIdx];
     if (audio && nextTrack) {
-      const audioUrl = getTrackAudioUrl(nextTrack, get().streamQuality);
+      const audioUrl = await resolveAudioSource(nextTrack, get().streamQuality);
       if (audioUrl) {
         audio.src = audioUrl;
         audio.volume = get().volume;
@@ -301,7 +338,7 @@ export const usePlayer = create<PlayerState>((set, get) => ({
       }
     }
   },
-  prev: () => {
+  prev: async () => {
     const { queue, index, progress } = get();
     if (progress > 3) {
       if (audio) audio.currentTime = 0;
@@ -312,7 +349,7 @@ export const usePlayer = create<PlayerState>((set, get) => ({
 
     const prevTrack = queue[prevIdx];
     if (audio && prevTrack) {
-      const audioUrl = getTrackAudioUrl(prevTrack, get().streamQuality);
+      const audioUrl = await resolveAudioSource(prevTrack, get().streamQuality);
       if (audioUrl) {
         audio.src = audioUrl;
         audio.volume = get().volume;
@@ -354,30 +391,96 @@ export const usePlayer = create<PlayerState>((set, get) => ({
       }
       return { liked, likedTracksList };
     }),
-  toggleDownload: (track) =>
-    set((s) => {
-      const downloaded = new Set(s.downloaded);
-      let downloadedTracksList = [...s.downloadedTracksList];
-      if (downloaded.has(track.id)) {
-        downloaded.delete(track.id);
-        downloadedTracksList = downloadedTracksList.filter((t) => t.id !== track.id);
-      } else {
-        downloaded.add(track.id);
-        downloadedTracksList.push(track);
+  toggleDownload: async (track) => {
+    const { downloaded, downloadedTracksList, downloadQuality } = get();
+    const isDownloaded = downloaded.has(track.id);
+
+    if (isDownloaded) {
+      try {
+        await deleteTrackDownload(track.id);
+        
+        set((s) => {
+          const newDownloaded = new Set(s.downloaded);
+          newDownloaded.delete(track.id);
+          const newDownloadedTracksList = s.downloadedTracksList.filter((t) => t.id !== track.id);
+          
+          if (typeof window !== "undefined") {
+            localStorage.setItem("mutunes-downloaded-tracks", JSON.stringify(newDownloadedTracksList));
+          }
+          
+          return {
+            downloaded: newDownloaded,
+            downloadedTracksList: newDownloadedTracksList,
+          };
+        });
+        toast.success(`Removed "${track.title}" from downloads.`);
+      } catch (err: any) {
+        console.error("Failed to delete track download:", err);
+        toast.error("Failed to delete offline files.");
       }
-      if (typeof window !== "undefined") {
-        localStorage.setItem("mutunes-downloaded-tracks", JSON.stringify(downloadedTracksList));
+    } else {
+      // Start download
+      set((s) => ({
+        downloadProgress: { ...s.downloadProgress, [track.id]: 1 },
+      }));
+
+      try {
+        await downloadTrack(track, downloadQuality, (progress) => {
+          set((s) => ({
+            downloadProgress: { ...s.downloadProgress, [track.id]: progress },
+          }));
+        });
+
+        // Add to downloaded tracks list
+        set((s) => {
+          const newDownloaded = new Set(s.downloaded);
+          newDownloaded.add(track.id);
+          const newDownloadedTracksList = [...s.downloadedTracksList, track];
+
+          const newProgress = { ...s.downloadProgress };
+          delete newProgress[track.id];
+
+          if (typeof window !== "undefined") {
+            localStorage.setItem("mutunes-downloaded-tracks", JSON.stringify(newDownloadedTracksList));
+          }
+
+          return {
+            downloaded: newDownloaded,
+            downloadedTracksList: newDownloadedTracksList,
+            downloadProgress: newProgress,
+          };
+        });
+        toast.success(`Downloaded "${track.title}" for offline playback!`);
+      } catch (err: any) {
+        console.error("Failed to download track:", err);
+        toast.error(err.message || `Failed to download "${track.title}".`);
+        
+        // Clear progress
+        set((s) => {
+          const newProgress = { ...s.downloadProgress };
+          delete newProgress[track.id];
+          return { downloadProgress: newProgress };
+        });
       }
-      return { downloaded, downloadedTracksList };
-    }),
-  clearCache: () => {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("mutunes-downloaded-tracks");
     }
-    set(() => ({
-      downloaded: new Set<string>(),
-      downloadedTracksList: [],
-    }));
+  },
+  clearCache: async () => {
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("mutunes-downloaded-tracks");
+        if (window.caches) {
+          await caches.delete("mutunes-tracks-cache");
+        }
+      }
+      set(() => ({
+        downloaded: new Set<string>(),
+        downloadedTracksList: [],
+      }));
+      toast.success("Offline storage cleared successfully.");
+    } catch (e) {
+      console.error("Error clearing offline cache:", e);
+      toast.error("Failed to clear offline storage.");
+    }
   },
   tick: () => {
     const { isPlaying, progress, queue, index, repeat } = get();

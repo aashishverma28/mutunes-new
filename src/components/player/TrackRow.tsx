@@ -1,4 +1,4 @@
-import { Play, Heart, MoreHorizontal, Download, CheckCircle2 } from "lucide-react";
+import { Play, Heart, MoreHorizontal, Download, CheckCircle2, Loader2 } from "lucide-react";
 import { usePlayer, useCurrentTrack } from "@/store/player";
 import { getAlbum, getArtist, formatDuration, type Track } from "@/data/catalog";
 import { EqBars } from "./NowPlaying";
@@ -35,6 +35,7 @@ export function TrackRow({
     liked,
     toggleDownload,
     downloaded,
+    downloadProgress,
     customPlaylists,
     addTrackToPlaylist,
     removeTrackFromPlaylist,
@@ -46,6 +47,7 @@ export function TrackRow({
   const artist = getArtist(track.artistId);
   const isLiked = liked.has(track.id);
   const isDownloaded = downloaded.has(track.id);
+  const progressVal = downloadProgress[track.id];
 
   return (
     <div
@@ -119,10 +121,18 @@ export function TrackRow({
         </button>
         <button
           onClick={() => toggleDownload(track)}
-          className={`${isDownloaded ? "text-emerald-500/80" : "text-transparent group-hover:text-muted-foreground/60"} hover:text-primary transition-colors cursor-pointer p-1 rounded-full hover:bg-white/5`}
+          disabled={progressVal !== undefined}
+          className={`${isDownloaded || progressVal !== undefined ? "text-emerald-500/80" : "text-transparent group-hover:text-muted-foreground/60"} hover:text-primary transition-colors cursor-pointer p-1 rounded-full hover:bg-white/5 disabled:cursor-not-allowed`}
           aria-label="Download"
         >
-          {isDownloaded ? (
+          {progressVal !== undefined ? (
+            <div className="relative h-4 w-4 flex items-center justify-center text-primary">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <span className="absolute text-[7px] font-sans font-bold leading-none translate-y-[-0.5px]">
+                {progressVal}
+              </span>
+            </div>
+          ) : isDownloaded ? (
             <CheckCircle2 className="h-4 w-4 text-emerald-500/80" />
           ) : (
             <Download className="h-4 w-4" />
@@ -207,8 +217,16 @@ export function TrackRow({
             <DropdownMenuItem onClick={() => toggleLike(track)} className="cursor-pointer">
               {isLiked ? "Remove from Liked" : "Like Song"}
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => toggleDownload(track)} className="cursor-pointer">
-              {isDownloaded ? "Remove Download" : "Download"}
+            <DropdownMenuItem 
+              onClick={() => toggleDownload(track)} 
+              disabled={progressVal !== undefined}
+              className="cursor-pointer"
+            >
+              {progressVal !== undefined 
+                ? `Downloading (${progressVal}%)` 
+                : isDownloaded 
+                  ? "Remove Download" 
+                  : "Download"}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
