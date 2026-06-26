@@ -1,15 +1,36 @@
-import { createFileRoute, Outlet, Link } from "@tanstack/react-router";
+import { createFileRoute, Outlet, Link, redirect } from "@tanstack/react-router";
 import { Sidebar } from "@/components/player/Sidebar";
 import { NowPlaying } from "@/components/player/NowPlaying";
 import { FullPlayer } from "@/components/player/FullPlayer";
 import { MobileNav } from "@/components/player/MobileNav";
 import { Settings, User } from "lucide-react";
+import { usePlayer } from "@/store/player";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export const Route = createFileRoute("/_player")({
+  beforeLoad: ({ location }) => {
+    const user = usePlayer.getState().user;
+    if (!user) {
+      throw redirect({
+        to: "/login",
+        search: {
+          redirect: location.href,
+        },
+      });
+    }
+  },
   component: PlayerLayout,
 });
 
 function PlayerLayout() {
+  const user = usePlayer((s) => s.user);
+  const logout = usePlayer((s) => s.logout);
+
   return (
     <div className="flex h-screen flex-col bg-background text-foreground">
       {/* YT Music style Top Header */}
@@ -40,12 +61,31 @@ function PlayerLayout() {
           >
             <Settings className="h-5 w-5" />
           </Link>
-          <div className="h-8 w-8 cursor-pointer overflow-hidden rounded-full border border-border bg-surface hover:border-muted-foreground/50 transition-colors">
-            {/* Simple dummy user profile avatar */}
-            <div className="grid h-full w-full place-items-center bg-primary/10 text-primary">
-              <User className="h-4 w-4" />
-            </div>
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <div className="h-8 w-8 cursor-pointer overflow-hidden rounded-full border border-border bg-surface hover:border-muted-foreground/50 transition-colors">
+                <div className="grid h-full w-full place-items-center bg-primary/10 text-primary">
+                  <User className="h-4 w-4" />
+                </div>
+              </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56 bg-background border border-border/80">
+              <div className="px-3 py-2 flex flex-col text-xs border-b border-border/50">
+                <span className="font-semibold text-foreground truncate">
+                  {user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Music Lover"}
+                </span>
+                <span className="text-muted-foreground truncate text-[10px] mt-0.5">
+                  {user?.email}
+                </span>
+              </div>
+              <DropdownMenuItem
+                onClick={logout}
+                className="cursor-pointer text-primary focus:bg-primary/10 focus:text-primary mt-1 text-xs"
+              >
+                Log Out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </header>
 

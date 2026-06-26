@@ -1,5 +1,7 @@
 import { create } from "zustand";
 import { tracks as allTracks, type Track } from "@/data/catalog";
+import { supabase } from "@/lib/supabase";
+import { type User as SupabaseUser } from "@supabase/supabase-js";
 
 export function getTrackAudioUrl(track: Track, quality: string): string {
   if (!track.downloadUrl || track.downloadUrl.length === 0) {
@@ -63,6 +65,8 @@ type PlayerState = {
   customPlaylists: CustomPlaylist[];
   streamQuality: string;
   downloadQuality: string;
+  user: SupabaseUser | null;
+  logout: () => void;
   setStreamQuality: (q: string) => void;
   setDownloadQuality: (q: string) => void;
   playQueue: (tracks: Track[], startIndex?: number) => void;
@@ -126,6 +130,7 @@ let initialDownloadedTracks: Track[] = [];
 let initialDownloaded: string[] = [];
 let initialStreamQuality = "high";
 let initialDownloadQuality = "high";
+let initialUser: SupabaseUser | null = null;
 
 if (typeof window !== "undefined") {
   try {
@@ -136,6 +141,10 @@ if (typeof window !== "undefined") {
     initialDownloaded = initialDownloadedTracks.map((t) => t.id);
     initialStreamQuality = localStorage.getItem("mutunes-stream-quality") || "high";
     initialDownloadQuality = localStorage.getItem("mutunes-download-quality") || "high";
+    const savedUser = localStorage.getItem("mutunes-user");
+    if (savedUser) {
+      initialUser = JSON.parse(savedUser);
+    }
   } catch (e) {
     console.error("Failed to load store from localStorage", e);
   }
@@ -157,6 +166,14 @@ export const usePlayer = create<PlayerState>((set, get) => ({
   expanded: false,
   streamQuality: initialStreamQuality,
   downloadQuality: initialDownloadQuality,
+  user: initialUser,
+  logout: async () => {
+    await supabase.auth.signOut();
+    set({ user: null });
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("mutunes-user");
+    }
+  },
   setStreamQuality: (q) => {
     set({ streamQuality: q });
     if (typeof window !== "undefined") {
@@ -445,3 +462,16 @@ export const useCurrentTrack = () => {
   const { queue, index } = usePlayer();
   return queue[index];
 };
+
+if (typeof window !== "undefined") {
+  // Listen to Supabase auth changes to sync with store and localStorage
+  supabase.auth.onAuthStateChange((event, session) => {
+    if (session?.user) {
+      usePlayer.setState({ user: session.user });
+      localStorage.setItem("mutunes-user", JSON.stringify(session.user));
+    } else if (event === "SIGNED_OUT") {
+      usePlayer.setState({ user: null });
+      localStorage.removeItem("mutunes-user");
+    }
+  });
+}

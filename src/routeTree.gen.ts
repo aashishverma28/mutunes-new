@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as PlayerRouteImport } from './routes/_player'
 import { Route as PlayerIndexRouteImport } from './routes/_player.index'
 import { Route as PlayerSettingsRouteImport } from './routes/_player.settings'
@@ -17,6 +18,11 @@ import { Route as PlayerBrowseRouteImport } from './routes/_player.browse'
 import { Route as PlayerPlaylistIdRouteImport } from './routes/_player.playlist.$id'
 import { Route as PlayerArtistIdRouteImport } from './routes/_player.artist.$id'
 
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PlayerRoute = PlayerRouteImport.update({
   id: '/_player',
   getParentRoute: () => rootRouteImport,
@@ -54,6 +60,7 @@ const PlayerArtistIdRoute = PlayerArtistIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof PlayerIndexRoute
+  '/login': typeof LoginRoute
   '/browse': typeof PlayerBrowseRoute
   '/library': typeof PlayerLibraryRoute
   '/settings': typeof PlayerSettingsRoute
@@ -61,6 +68,7 @@ export interface FileRoutesByFullPath {
   '/playlist/$id': typeof PlayerPlaylistIdRoute
 }
 export interface FileRoutesByTo {
+  '/login': typeof LoginRoute
   '/browse': typeof PlayerBrowseRoute
   '/library': typeof PlayerLibraryRoute
   '/settings': typeof PlayerSettingsRoute
@@ -71,6 +79,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_player': typeof PlayerRouteWithChildren
+  '/login': typeof LoginRoute
   '/_player/browse': typeof PlayerBrowseRoute
   '/_player/library': typeof PlayerLibraryRoute
   '/_player/settings': typeof PlayerSettingsRoute
@@ -82,6 +91,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/login'
     | '/browse'
     | '/library'
     | '/settings'
@@ -89,6 +99,7 @@ export interface FileRouteTypes {
     | '/playlist/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/login'
     | '/browse'
     | '/library'
     | '/settings'
@@ -98,6 +109,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_player'
+    | '/login'
     | '/_player/browse'
     | '/_player/library'
     | '/_player/settings'
@@ -108,10 +120,18 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   PlayerRoute: typeof PlayerRouteWithChildren
+  LoginRoute: typeof LoginRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_player': {
       id: '/_player'
       path: ''
@@ -187,6 +207,7 @@ const PlayerRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   PlayerRoute: PlayerRouteWithChildren,
+  LoginRoute: LoginRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
