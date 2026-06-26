@@ -15,17 +15,12 @@ function PlayerLayout() {
       {/* YT Music style Top Header */}
       <header className="flex h-16 shrink-0 items-center justify-between border-b border-border/40 bg-background px-6 z-30">
         {/* Left: Brand Logo */}
-        <Link to="/" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm">
-            {/* YT Music Logo: Red circle with white play triangle */}
-            <svg
-              viewBox="0 0 24 24"
-              className="h-4.5 w-4.5 fill-current"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path d="M8 5v14l11-7z" />
-            </svg>
-          </div>
+        <Link to="/" className="flex items-center gap-2.5">
+          <img
+            src="https://plain-apac-prod-public.komododecks.com/202606/26/DCtu1opdndBdW3UY3wPJ/image.png"
+            alt="MUTUNES Logo"
+            className="h-8 w-8 object-contain rounded-full shadow-sm"
+          />
           <div className="flex items-baseline gap-1">
             <span className="font-sans text-xl font-bold tracking-tight text-foreground uppercase">
               Mutunes
